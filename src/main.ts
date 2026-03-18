@@ -10,7 +10,7 @@ export default class LinkUpdaterPlugin extends Plugin {
 		console.log("Added headings:", added.map(h => h.heading));
 		console.log("Removed headings:", removed.map(h => h.heading));
 
-		let backlinks = new Set()
+		let backlinks = new Set<string>()
 		// backlinks.add(file.path) // non possiamo escludere che il file stesso abbia dei link a se stesso
 
 		const resolvedLinks = this.app.metadataCache.resolvedLinks;
@@ -21,6 +21,8 @@ export default class LinkUpdaterPlugin extends Plugin {
 				}
 			}
 		}
+		backlinks.delete(file.path)
+
 		console.log(backlinks)
 		if (added.length != removed.length) {
 			console.log("numer of added title does not match with the removed ones")
@@ -31,20 +33,22 @@ export default class LinkUpdaterPlugin extends Plugin {
 		for (let i = 0; i < added.length; i++) {
 			let oldTitle = "\\[\\[#" + removed[i]?.heading + "(.*)\\]\\]"
 			let newTitle = "[[#" + added[i]?.heading + "$1]]"
-			console.log(file.path + ":" + oldTitle + " --> " + newTitle)
+			// console.log(file.path + ":" + oldTitle + " --> " + newTitle)
 			await this.replaceFileContent(file, oldTitle, newTitle)
 
 			oldTitle = "\\[\\[(.*)" + file.basename + "#" + removed[i]?.heading + "(.*)\\]\\]"
 			newTitle = "[[$1" + file.basename + "#" + added[i]?.heading + "$2]]"
-			console.log(file.path + ":" + oldTitle + " --> " + newTitle)
+			// console.log(file.path + ":" + oldTitle + " --> " + newTitle)
 			await this.replaceFileContent(file, oldTitle, newTitle)
 
-			// backlinks.forEach(async (pathOfFileWithBackLinks: string) => {
-			// 	const oldTitle = "\\[\\[(.*)" + file.basename + "#" + removed[i]?.heading + "(.*)\\]\\]"
-			// 	const newTitle = "[[$1" + file.basename + "#" + added[i]?.heading + "$2]]"
-			// 	console.log(pathOfFileWithBackLinks + ":" + oldTitle + " --> " + newTitle)
-			// 	await this.replaceFileContent(file, oldTitle, newTitle)
-			// })
+			for (const pathOfFileWithBackLinks of backlinks) {
+				const fileWithBackLinks = this.app.vault.getFileByPath(pathOfFileWithBackLinks)
+				if (!fileWithBackLinks) continue
+				const oldTitle = "\\[\\[(.*)" + file.basename + "#" + removed[i]?.heading + "(.*)\\]\\]"
+				const newTitle = "[[$1" + file.basename + "#" + added[i]?.heading + "$2]]"
+				// console.log(pathOfFileWithBackLinks + ":" + oldTitle + " --> " + newTitle)
+				await this.replaceFileContent(fileWithBackLinks, oldTitle, newTitle)
+			}
 		}
 		// new Notice("Updated " + (1 + backlinks.size) + " file")
 	}
@@ -242,10 +246,10 @@ export default class LinkUpdaterPlugin extends Plugin {
 
 		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
 		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			if (this.settings.enableNotification)
-				new Notice(this.settings.debounce + "");
-		});
+		// this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
+		// 	if (this.settings.enableNotification)
+		// 		new Notice(this.settings.debounce + "");
+		// });
 
 		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
 		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
